@@ -6,8 +6,8 @@ from steemapi import SteemWalletRPC
 # Config
 interval = 3600       # Feed publishing interval in seconds
 freq = 60             # Frequency of parsing trade histories
+witness = "yourwitnessid"    # Your witness name
 null_price = 0.400    # Current Price (Just in case)
-witness = "clayop"    # Your witness name
 
 rpc = SteemWalletRPC("localhost", 8092, "", "")
 
