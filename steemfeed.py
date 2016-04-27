@@ -6,9 +6,10 @@ from steemapi import SteemWalletRPC
 # Config
 interval = 3600       # Feed publishing interval in seconds
 freq = 60             # Frequency of parsing trade histories
-witness = "yourwitnessid"    # Your witness name
-null_price = 0.400    # Current Price (Just in case)
+null_price = 0.500    # Current Price (Just in case)
+witness = "clayop"    # Your witness name
 
+print("Connecting to STEEM RPC")
 rpc = SteemWalletRPC("localhost", 8092, "", "")
 
 def btc_usd():
@@ -46,6 +47,8 @@ if __name__ == '__main__':
         price = null_price
     start_t = (time.time()//freq)*freq - freq
     last_t = start_t - 1
+    print("Please wait until the end of first interval: " + str(interval) + " seconds")
+    print("Don't forget to unlock your cli_wallet")
 
     while True:
         curr_t = (time.time()//freq)*freq - freq
@@ -63,6 +66,7 @@ if __name__ == '__main__':
                     else:
                         break
             except:
+                print("Error in fetching Bittrex market history")
                 pass
         if curr_t - start_t >= interval:
             if steem_q > 0:
@@ -71,5 +75,7 @@ if __name__ == '__main__':
                 print("Published price feed: " + price + " USD/STEEM at " + time.ctime())
                 steem_q = 0
                 btc_q = 0
+            else:
+                print("No trades occured during this period")
             start_t = curr_t
         time.sleep(freq*0.7)
