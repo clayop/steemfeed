@@ -5,9 +5,11 @@ To use this price feed script, the following dependencies and packages should be
     sudo pip3 install python-dateutil
     sudo pip3 install steem
    
-In addition, you should run cli_wallet by using the following command
+In addition, you should run cli_wallet by using the following command,
 
     cli_wallet -s ws://localhost:8090 -H 127.0.0.1:8092 --rpc-http-allowip=127.0.0.1
+
+And unlock your cli_wallet.
 
 
 ### Installation
