@@ -151,7 +151,7 @@ if __name__ == '__main__':
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
                 else:
                     if abs(1 - price/last_price) > manual_conf:
-                        if confirm_telegram(manual_conf, price_str) is True:
+                        if confirm(manual_conf, price_str) is True:
                             rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
                             print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime())
                     else:
