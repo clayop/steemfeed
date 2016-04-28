@@ -36,4 +36,5 @@ Then, edit the `steemfeed.py` to configure. We have four items under Config cate
 ### Run
 Then, run this code in a separate screen
 
-    screen -dmS steemfeed python3 ./steemfeed.py
+    screen -S steemfeed
+    python3 ./steemfeed.py
