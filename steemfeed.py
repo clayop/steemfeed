@@ -2,7 +2,6 @@ import time
 import dateutil.parser
 import requests
 import random
-import telegram
 from steemapi import SteemWalletRPC
 
 # Config
@@ -23,9 +22,11 @@ witness        = "yourwitness"       # Your witness name
 print("Connecting to Steem RPC")
 rpc = SteemWalletRPC(rpc_host, rpc_port, "", "")
 print("Connected")
-print("Connecting to Telegram")
-bot = telegram.Bot(token=telegram_token)
-print("Connected")
+if use_telegram == 1:
+    import telegram
+    print("Connecting to Telegram")
+    bot = telegram.Bot(token=telegram_token)
+    print("Connected")
 
 def btc_usd():
     n = 0
