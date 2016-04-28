@@ -22,8 +22,16 @@ Then, edit the `steemfeed.py` to configure. We have four items under Config cate
 
 * `interval`: Interval of publishing price feed. The default value is one hour (3600 seconds)
 * `freq`: Frequency of parsing trade history. Please be noticed that it can parse only 200 last trading history (Bittrex), so as trading is active you may need to decrease this frequency value.
+* `min_change`: Minimum price change percentage to publish feed
+* `max_age`: Maximum age of price feed
+* `manual_conf`: Maximum price change without manual confirmation. If price change exceeds this, you will be asked to confirm
+* `use_telegram`: If you want to use Telegram for confirmation, enter 1
+* `telegram_token`: Create your Telegram bot at @BotFather (https://telegram.me/botfather)
+* `telegram_id`: Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
+* `rpc_host`: Your RPC host address
+* `rpc_port`: Your RPC host port
 * `witness`: Enter ***YOUR WITNESS ID*** here
-* `null_price`: Set this manually to the current price.
+ 
 
 ### Run
 Then, run this code in a separate screen
