@@ -56,7 +56,7 @@ def btc_usd():
     for p in prices.values():
         total_usd += p['price'] * p['volume']
         total_btc += p['volume']
-    avg_price = total_usd / total_usd
+    avg_price = total_usd / total_btc
     return avg_price
 
 def rand_interval(intv):
