@@ -126,6 +126,7 @@ if __name__ == '__main__':
     if init_pub.lower() == "y":
         rpc.publish_feed(witness, {"base": format(last_price, ".3f") +" SBD", "quote":"1.000 STEEM"}, True)
         print("Published price feed: " + format(last_price, ".3f") + " USD/STEEM at " + time.ctime())
+        last_update_t = (time.time()//freq)*freq - freq
     else:
         last_price = 0.0001
         print("Please confirm your first feed price after " + str(int(interval/60)) + " minutes")
