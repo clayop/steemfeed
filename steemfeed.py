@@ -28,29 +28,36 @@ if use_telegram == 1:
     print("Connected")
 
 def btc_usd():
-    n = 0
+    prices = {}
     try:
-        bitfinex = float(requests.get("https://api.bitfinex.com/v1/pubticker/BTCUSD").json()["last_price"])
-        n += 1
+        r = requests.get("https://api.bitfinex.com/v1/pubticker/BTCUSD").json()
+        prices['bitfinex'] = {'price': float(r['last_price']), 'volume': float(r['volume'])}
     except:
-        bitfinex = 0
+        pass
     try:
-        coinbase = float(requests.get("https://api.exchange.coinbase.com/products/BTC-USD/ticker").json()["price"])
-        n += 1
+        r = requests.get("https://api.exchange.coinbase.com/products/BTC-USD/ticker").json()
+        prices['coinbase'] = {'price': float(r['price']), 'volume': float(r['volume'])}
     except:
-        coinbase = 0
+        pass
     try:
-        okcoin = float(requests.get("https://www.okcoin.com/api/v1/ticker.do?symbol=btc_usd").json()["ticker"]["last"])
-        n += 1
+        r = requests.get("https://www.okcoin.com/api/v1/ticker.do?symbol=btc_usd").json()["ticker"]
+        prices['okcoin'] = {'price': float(r['last']), 'volume': float(r['vol'])}
     except:
-        okcoin = 0
+        pass
     try:
-        bitstamp = float(requests.get("https://www.bitstamp.net/api/v2/ticker/btcusd/").json()["last"])
-        n += 1
+        r = requests.get("https://www.bitstamp.net/api/v2/ticker/btcusd/").json()
+        prices['bitstamp'] = {'price': float(r['last']), 'volume': float(r['volume'])}
     except:
-        bitstamp = 0
-    res = (bitfinex + coinbase + okcoin + bitstamp)/n
-    return res
+        pass
+    if not prices:
+       raise Exception("All BTC price feeds failed")
+    total_usd = 0
+    total_btc = 0
+    for p in prices.values():
+        total_usd += p['price'] * p['volume']
+        total_btc += p['volume']
+    avg_price = total_usd / total_usd
+    return avg_price
 
 def rand_interval(intv):
     intv += intv*rand_level*random.uniform(-1, 1)
