@@ -18,7 +18,6 @@ rpc_host       = "localhost"
 rpc_port       = 8092
 witness        = "yourwitness"       # Your witness name
 
-
 print("Connecting to Steem RPC")
 rpc = SteemWalletRPC(rpc_host, rpc_port, "", "")
 print("Connected")
@@ -29,29 +28,36 @@ if use_telegram == 1:
     print("Connected")
 
 def btc_usd():
-    n = 0
+    prices = {}
     try:
-        bitfinex = float(requests.get("https://api.bitfinex.com/v1/pubticker/BTCUSD").json()["last_price"])
-        n += 1
+        r = requests.get("https://api.bitfinex.com/v1/pubticker/BTCUSD").json()
+        prices['bitfinex'] = {'price': float(r['last_price']), 'volume': float(r['volume'])}
     except:
-        bitfinex = 0
+        pass
     try:
-        coinbase = float(requests.get("https://api.exchange.coinbase.com/products/BTC-USD/ticker").json()["price"])
-        n += 1
+        r = requests.get("https://api.exchange.coinbase.com/products/BTC-USD/ticker").json()
+        prices['coinbase'] = {'price': float(r['price']), 'volume': float(r['volume'])}
     except:
-        coinbase = 0
+        pass
     try:
-        okcoin = float(requests.get("https://www.okcoin.com/api/v1/ticker.do?symbol=btc_usd").json()["ticker"]["last"])
-        n += 1
+        r = requests.get("https://www.okcoin.com/api/v1/ticker.do?symbol=btc_usd").json()["ticker"]
+        prices['okcoin'] = {'price': float(r['last']), 'volume': float(r['vol'])}
     except:
-        okcoin = 0
+        pass
     try:
-        bitstamp = float(requests.get("https://www.bitstamp.net/api/v2/ticker/btcusd/").json()["last"])
-        n += 1
+        r = requests.get("https://www.bitstamp.net/api/v2/ticker/btcusd/").json()
+        prices['bitstamp'] = {'price': float(r['last']), 'volume': float(r['volume'])}
     except:
-        bitstamp = 0
-    res = (bitfinex + coinbase + okcoin + bitstamp)/n
-    return res
+        pass
+    if not prices:
+       raise Exception("All BTC price feeds failed")
+    total_usd = 0
+    total_btc = 0
+    for p in prices.values():
+        total_usd += p['price'] * p['volume']
+        total_btc += p['volume']
+    avg_price = total_usd / total_btc
+    return avg_price
 
 def rand_interval(intv):
     intv += intv*rand_level*random.uniform(-1, 1)
@@ -90,14 +96,14 @@ def confirm(pct, p):
             update_id = updates.update_id
             cmd = updates.message.text
             if update_id > last_update_id:
-                if chat_id == telegram_id and cmd.split()[0] == "confirm":
+                if chat_id == telegram_id and cmd.lower() == "confirm":
                     bot.sendMessage(chat_id=telegram_id, text="Publishing confirmed")
+                    last_update_id = update_id
                     return True
-                elif chat_id == telegram_id and cmd.split()[0] == "deny":
+                elif chat_id == telegram_id and cmd.lower() == "deny":
                     bot.sendMessage(chat_id=telegram_id, text="Publishing denied")
+                    last_update_id = update_id
                     return False
-                else:
-                    bot.sendMessage(chat_id=telegram_id, text="Please type 'confirm' or push 'deny' button", reply_markup=reply_markup)
             time.sleep(3)
 
 
@@ -120,6 +126,7 @@ if __name__ == '__main__':
     if init_pub.lower() == "y":
         rpc.publish_feed(witness, {"base": format(last_price, ".3f") +" SBD", "quote":"1.000 STEEM"}, True)
         print("Published price feed: " + format(last_price, ".3f") + " USD/STEEM at " + time.ctime())
+        last_update_t = (time.time()//freq)*freq - freq
     else:
         last_price = 0.0001
         print("Please confirm your first feed price after " + str(int(interval/60)) + " minutes")
@@ -146,7 +153,7 @@ if __name__ == '__main__':
             if steem_q > 0:
                 price = btc_q/steem_q*btc_usd()
                 price_str = format(price, ".3f")
-                if (abs(1 - price/last_price) < min_change) and (curr_t - last_update_t < max_age):
+                if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
                     print("No significant price change or the feed is not obsolete")
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
                 else:
@@ -154,13 +161,14 @@ if __name__ == '__main__':
                         if confirm(manual_conf, price_str) is True:
                             rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
                             print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime())
+                            last_price = price
                     else:
                         rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
                         print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime())
+                        last_price = price
                     steem_q = 0
                     btc_q = 0
-                    last_price = price
-                    last_update = curr_t
+                    last_update_t = curr_t
             else:
                 print("No trades occured during this period")
             interval = rand_interval(interval_init)
