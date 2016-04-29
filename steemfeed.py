@@ -18,7 +18,6 @@ rpc_host       = "localhost"
 rpc_port       = 8092
 witness        = "yourwitness"       # Your witness name
 
-
 print("Connecting to Steem RPC")
 rpc = SteemWalletRPC(rpc_host, rpc_port, "", "")
 print("Connected")
@@ -90,14 +89,14 @@ def confirm(pct, p):
             update_id = updates.update_id
             cmd = updates.message.text
             if update_id > last_update_id:
-                if chat_id == telegram_id and cmd.split()[0] == "confirm":
+                if chat_id == telegram_id and cmd.lower() == "confirm":
                     bot.sendMessage(chat_id=telegram_id, text="Publishing confirmed")
+                    last_update_id = update_id
                     return True
-                elif chat_id == telegram_id and cmd.split()[0] == "deny":
+                elif chat_id == telegram_id and cmd.lower() == "deny":
                     bot.sendMessage(chat_id=telegram_id, text="Publishing denied")
+                    last_update_id = update_id
                     return False
-                else:
-                    bot.sendMessage(chat_id=telegram_id, text="Please type 'confirm' or push 'deny' button", reply_markup=reply_markup)
             time.sleep(3)
 
 
