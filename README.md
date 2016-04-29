@@ -18,7 +18,7 @@ Copy the code in [this link](https://github.com/clayop/steemfeed/blob/master/ste
 
 
 ### Configuration
-Then, edit the `steemfeed.py` to configure. We have four items under Config category in the code. interval, freq, null_price, witness
+Then, edit the `steemfeed.py` to configure. We have some items under Config category in the code.
 
 * `interval`: Interval of publishing price feed. The default value is one hour (3600 seconds)
 * `freq`: Frequency of parsing trade history. Please be noticed that it can parse only 200 last trading history (Bittrex), so as trading is active you may need to decrease this frequency value.
