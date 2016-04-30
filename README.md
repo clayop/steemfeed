@@ -4,8 +4,7 @@ To use this price feed script, the following dependencies and packages should be
     sudo apt-get install libffi-dev libssl-dev python3-dev python3-pip
     sudo pip3 install python-dateutil
     sudo pip3 install steem
-    sudo pip3 install python-telegram-bot   # Optional
-   
+
 In addition, you should run cli_wallet by using the following command,
 
     cli_wallet -s ws://localhost:8090 -H 127.0.0.1:8092 --rpc-http-allowip=127.0.0.1
