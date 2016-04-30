@@ -1,4 +1,4 @@
-import time
+import time, calendar, datetime
 import dateutil.parser
 import requests
 import random
@@ -26,6 +26,10 @@ if use_telegram == 1:
     print("Connecting to Telegram")
     bot = telegram.Bot(token=telegram_token)
     print("Connected")
+
+def utc_time():
+    t = calendar.timegm(datetime.datetime.utcnow().utctimetuple())
+    return t
 
 def btc_usd():
     prices = {}
@@ -119,20 +123,20 @@ if __name__ == '__main__':
         last_price = float(rpc.get_feed_history()["current_median_history"]["base"].split()[0])/float(rpc.get_feed_history()["current_median_history"]["quote"].split()[0])
         print("Failed to fetch market price. Current median feed price " + format(last_price, ".3f") + " USD/STEEM will be used")
 
-    start_t = (time.time()//freq)*freq - freq
+    start_t = (utc_time()//freq)*freq - freq
     last_t = start_t - 1
     print("Please be advised that your first price feed will be published when the price changes over " + format(min_change*100, ".1f") + "% or after " + format(max_age/3600, ".0f") + " hours")
     init_pub = input("Will you publish this price feed (" + format(last_price, ".3f") + " USD/STEEM)? (y/N) ")
     if init_pub.lower() == "y":
         rpc.publish_feed(witness, {"base": format(last_price, ".3f") +" SBD", "quote":"1.000 STEEM"}, True)
         print("Published price feed: " + format(last_price, ".3f") + " USD/STEEM at " + time.ctime())
-        last_update_t = (time.time()//freq)*freq - freq
+        last_update_t = (utc_time()//freq)*freq - freq
     else:
         last_price = 0.0001
         print("Please confirm your first feed price after " + str(int(interval/60)) + " minutes")
 
     while True:
-        curr_t = (time.time()//freq)*freq - freq
+        curr_t = (utc_time()//freq)*freq - freq
         if curr_t > last_t:
             try:
                 h = requests.get("https://bittrex.com/api/v1.1/public/getmarkethistory?market=BTC-STEEM")
