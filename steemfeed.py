@@ -1,10 +1,11 @@
-import time, calendar, datetime
+import time, datetime
 import dateutil.parser
 import requests
 import random
 from steemapi import SteemWalletRPC
 
 # Config
+
 interval_init  = 60*60*2             # Feed publishing interval in seconds
 rand_level     = 0.10                # Degree of randomness of interval
 freq           = 60                  # Frequency of parsing trade histories
@@ -18,14 +19,12 @@ rpc_host       = "localhost"
 rpc_port       = 8092
 witness        = "yourwitness"       # Your witness name
 
-print("Connecting to Steem RPC")
-rpc = SteemWalletRPC(rpc_host, rpc_port, "", "")
-print("Connected")
-if use_telegram == 1:
-    import telegram
-    print("Connecting to Telegram")
-    bot = telegram.Bot(token=telegram_token)
-    print("Connected")
+
+def telegram(method, params=None):
+    url = "https://api.telegram.org/bot"+telegram_token+"/"
+    params = params
+    r = requests.get(url+method, params = params).json()
+    return r
 
 def utc_time():
     t = datetime.datetime.utcnow().timestamp()
@@ -89,29 +88,48 @@ def confirm(pct, p):
                 print("Publishing denied")
                 return False
     elif use_telegram == 1:
-        last_update_id = bot.getUpdates()[-1].update_id
         custom_keyboard = [["deny"]]
         reply_markup = {"keyboard":custom_keyboard, "resize_keyboard": True}
         conf_msg = ("Your price feed change is over " + format(pct*100, ".1f") + "% (" + p + "USD/STEEM) If you confirm this, type 'confirm'")
-        bot.sendMessage(chat_id=telegram_id, text=conf_msg, reply_markup=reply_markup)
+        telegram("sendMessage")(chat_id=telegram_id, text=conf_msg, reply_markup=reply_markup)
         while True:
-            updates = bot.getUpdates(offset=last_update_id, limit = 30)[-1]
-            chat_id = updates.message.chat_id
-            update_id = updates.update_id
-            cmd = updates.message.text
+            updates = telegram("getUpdates", {"offset":last_update_id, "limit": 100})["result"][-1]
+            chat_id = updates["message"]["from"]["id"]
+            update_id = updates["update_id"]
+            cmd = updates["message"]["text"]
             if update_id > last_update_id:
                 if chat_id == telegram_id and cmd.lower() == "confirm":
-                    bot.sendMessage(chat_id=telegram_id, text="Publishing confirmed")
+                    payload = {"chat_id":telegram_id, "text":"Publishing confirmed"}
+                    m = telegram("sendMessage", payload)
                     last_update_id = update_id
                     return True
                 elif chat_id == telegram_id and cmd.lower() == "deny":
-                    bot.sendMessage(chat_id=telegram_id, text="Publishing denied")
+                    payload = {"chat_id":telegram_id, "text":"Publishing denied"}
+                    m = telegram("sendMessage", payload)
                     last_update_id = update_id
                     return False
             time.sleep(3)
 
 
 if __name__ == '__main__':
+    print("Connecting to Steem RPC")
+    rpc = SteemWalletRPC(rpc_host, rpc_port, "", "")
+    try:
+        bh = rpc.info()["head_block_num"]
+        print("Connected. Current block height is " + str(bh))
+    except:
+        print("Connection error. Check your cli_wallet")
+        quit()
+    if use_telegram == 1:
+        try:
+            print("Connecting to Telegram")
+            last_update_id = telegram("getUpdates")["result"][-1]["update_id"]
+            payload = {"chat_id":telegram_id, "text":"Connected"}
+            m = telegram("sendMessage", payload)
+        except:
+            print("Connection error. Check that you had any conversation with your bot")
+            quit()
+
     steem_q = 0
     btc_q = 0
     last_update_t = 0
@@ -164,11 +182,11 @@ if __name__ == '__main__':
                     if abs(1 - price/last_price) > manual_conf:
                         if confirm(manual_conf, price_str) is True:
                             rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
-                            print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime())
+                            print("\nPublished price feed: " + price_str + " USD/STEEM at " + time.ctime())
                             last_price = price
                     else:
                         rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
-                        print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime())
+                        print("\nPublished price feed: " + price_str + " USD/STEEM at " + time.ctime())
                         last_price = price
                     steem_q = 0
                     btc_q = 0
