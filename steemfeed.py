@@ -28,7 +28,7 @@ if use_telegram == 1:
     print("Connected")
 
 def utc_time():
-    t = calendar.timegm(datetime.datetime.utcnow().utctimetuple())
+    t = datetime.datetime.utcnow().timestamp()
     return t
 
 def btc_usd():
