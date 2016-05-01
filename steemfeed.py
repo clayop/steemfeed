@@ -2,6 +2,7 @@ import time, datetime
 import dateutil.parser
 import requests
 import random
+import json
 from steemapi import SteemWalletRPC
 
 # Config
@@ -70,9 +71,9 @@ def rand_interval(intv):
         intv = 60*60*24*7
     return(int(intv))
 
-def confirm(pct, p):
+def confirm(pct, p, last_update_id=None):
     if use_telegram == 0:
-        conf = input("Your price feed change is over " + format(pct*100, ".1f") + "% (" + p + "USD/STEEM) If you confirm this, type 'confirm': ")
+        conf = input("Your price feed change is over " + format(pct*100, ".1f") + "% (" + p + " USD/STEEM) If you confirm this, type 'confirm': ")
         if conf.lower() == "confirm":
             return True
         else:
@@ -89,10 +90,10 @@ def confirm(pct, p):
                 return False
     elif use_telegram == 1:
         custom_keyboard = [["deny"]]
-        reply_markup = {"keyboard":custom_keyboard, "resize_keyboard": True}
-        conf_msg = ("Your price feed change is over " + format(pct*100, ".1f") + "% (" + p + "USD/STEEM) If you confirm this, type 'confirm'")
+        reply_markup = json.dumps({"keyboard":custom_keyboard, "resize_keyboard": True})
+        conf_msg = ("Your price feed change is over " + format(pct*100, ".1f") + "% (" + p + " USD/STEEM) If you confirm this, type 'confirm'")
         payload = {"chat_id":telegram_id, "text":conf_msg, "reply_markup":reply_markup}
-        telegram("sendMessage", payload)
+        m = telegram("sendMessage", payload)
         while True:
             updates = telegram("getUpdates", {"offset":last_update_id, "limit": 100})["result"][-1]
             chat_id = updates["message"]["from"]["id"]
@@ -181,7 +182,7 @@ if __name__ == '__main__':
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
                 else:
                     if abs(1 - price/last_price) > manual_conf:
-                        if confirm(manual_conf, price_str) is True:
+                        if confirm(manual_conf, price_str, last_update_id) is True:
                             rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
                             print("\nPublished price feed: " + price_str + " USD/STEEM at " + time.ctime())
                             last_price = price
