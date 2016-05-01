@@ -12,9 +12,9 @@ freq           = 60                  # Frequency of parsing trade histories
 min_change     = 0.03                # Minimum price change to publish feed
 max_age        = 60*60*24            # Maximum age of price feed
 manual_conf    = 0.30                # Maximum price change without manual confirmation
-use_telegram   = 0                   # If 1, you can confirm manual price feed through Telegram
-telegram_token = "telegram_tocken"   # Create your Telegram bot at @BotFather (https://telegram.me/botfather)
-telegram_id    = 0                   # Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
+use_telegram   = 1                   # If 1, you can confirm manual price feed through Telegram
+telegram_token = "telegram_token"    # Create your Telegram bot at @BotFather (https://t$
+telegram_id    = 00000000            # Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
 rpc_host       = "localhost"
 rpc_port       = 8092
 witness        = "yourwitness"       # Your witness name
@@ -91,7 +91,8 @@ def confirm(pct, p):
         custom_keyboard = [["deny"]]
         reply_markup = {"keyboard":custom_keyboard, "resize_keyboard": True}
         conf_msg = ("Your price feed change is over " + format(pct*100, ".1f") + "% (" + p + "USD/STEEM) If you confirm this, type 'confirm'")
-        telegram("sendMessage")(chat_id=telegram_id, text=conf_msg, reply_markup=reply_markup)
+        payload = {"chat_id":telegram_id, "text":conf_msg, "reply_markup":reply_markup}
+        telegram("sendMessage", payload)
         while True:
             updates = telegram("getUpdates", {"offset":last_update_id, "limit": 100})["result"][-1]
             chat_id = updates["message"]["from"]["id"]
