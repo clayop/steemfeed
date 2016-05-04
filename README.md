@@ -3,6 +3,7 @@ To use this price feed script, the following dependencies and packages should be
 
     sudo apt-get install libffi-dev libssl-dev python3-dev python3-pip
     sudo pip3 install python-dateutil
+    sudo pip3 install websocket-client
     sudo pip3 install steem
 
 In addition, you should run cli_wallet by using the following command,
