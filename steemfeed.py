@@ -205,19 +205,19 @@ if __name__ == '__main__':
             for i in range(50):
                 if (dateutil.parser.parse(dex_btc_h[0]["time"]).timestamp() + time_adj) >= curr_t:
                     if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                        steem_q += dex_btc_h[i]["op"]["pays"]["amount"]/1000
-                        btc_q += dex_btc_h[i]["op"]["receives"]["amount"]/100000000
+                        steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
+                        btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
                     else:
-                        steem_q += dex_btc_h[i]["op"]["receives"]["amount"]/1000
-                        btc_q += dex_btc_h[i]["op"]["pays"]["amount"]/100000000
+                        steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
+                        btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8
             for i in range(50):
                 if (dateutil.parser.parse(dex_bts_h[0]["time"]).timestamp() + time_adj) >= curr_t:
                     if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                        steem_q += dex_bts_h[i]["op"]["pays"]["amount"]/1000
-                        btc_q += dex_bts_h[i]["op"]["receives"]["amount"]/100000*bts_btc_p
+                        steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3
+                        btc_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/(10**5)*bts_btc_p
                     else:
-                        steem_q += dex_bts_h[i]["op"]["receives"]["amount"]/1000
-                        btc_q += dex_bts_h[i]["op"]["pays"]["amount"]/100000*bts_btc_p
+                        steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
+                        btc_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/(10**5)*bts_btc_p
 
             last_t = curr_t
 
