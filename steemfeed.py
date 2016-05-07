@@ -3,6 +3,8 @@ import dateutil.parser
 import requests
 import random
 import json
+import websocket
+from websocket import create_connection
 from steemapi import SteemWalletRPC
 
 # Config
@@ -15,53 +17,11 @@ max_age        = 60*60*24            # Maximum age of price feed
 manual_conf    = 0.30                # Maximum price change without manual confirmation
 use_telegram   = 0                   # If 1, you can confirm manual price feed through Telegram
 telegram_token = "telegram_token"    # Create your Telegram bot at @BotFather (https://t$
-telegram_id    = 00000000            # Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
+telegram_id    = 0                   # Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
+bts_ws         = ["wss://dele-puppy.com/ws", "wss://bitshares.openledger.info/ws", "wss://valen-tin.fr:8090/ws"]
 rpc_host       = "localhost"
 rpc_port       = 8092
 witness        = "yourwitness"       # Your witness name
-
-
-def telegram(method, params=None):
-    url = "https://api.telegram.org/bot"+telegram_token+"/"
-    params = params
-    r = requests.get(url+method, params = params).json()
-    return r
-
-def utc_time():
-    t = datetime.datetime.utcnow().timestamp()
-    return t
-
-def btc_usd():
-    prices = {}
-    try:
-        r = requests.get("https://api.bitfinex.com/v1/pubticker/BTCUSD").json()
-        prices['bitfinex'] = {'price': float(r['last_price']), 'volume': float(r['volume'])}
-    except:
-        pass
-    try:
-        r = requests.get("https://api.exchange.coinbase.com/products/BTC-USD/ticker").json()
-        prices['coinbase'] = {'price': float(r['price']), 'volume': float(r['volume'])}
-    except:
-        pass
-    try:
-        r = requests.get("https://www.okcoin.com/api/v1/ticker.do?symbol=btc_usd").json()["ticker"]
-        prices['okcoin'] = {'price': float(r['last']), 'volume': float(r['vol'])}
-    except:
-        pass
-    try:
-        r = requests.get("https://www.bitstamp.net/api/v2/ticker/btcusd/").json()
-        prices['bitstamp'] = {'price': float(r['last']), 'volume': float(r['volume'])}
-    except:
-        pass
-    if not prices:
-       raise Exception("All BTC price feeds failed")
-    total_usd = 0
-    total_btc = 0
-    for p in prices.values():
-        total_usd += p['price'] * p['volume']
-        total_btc += p['volume']
-    avg_price = total_usd / total_btc
-    return avg_price
 
 def rand_interval(intv):
     intv += intv*rand_level*random.uniform(-1, 1)
@@ -112,12 +72,78 @@ def confirm(pct, p, last_update_id=None):
                     return False
             time.sleep(3)
 
+def telegram(method, params=None):
+    url = "https://api.telegram.org/bot"+telegram_token+"/"
+    params = params
+    r = requests.get(url+method, params = params).json()
+    return r
+
+def btc_usd():
+    prices = {}
+    try:
+        r = requests.get("https://api.bitfinex.com/v1/pubticker/BTCUSD").json()
+        prices['bitfinex'] = {'price': float(r['last_price']), 'volume': float(r['volume'])}
+    except:
+        pass
+    try:
+        r = requests.get("https://api.exchange.coinbase.com/products/BTC-USD/ticker").json()
+        prices['coinbase'] = {'price': float(r['price']), 'volume': float(r['volume'])}
+    except:
+        pass
+    try:
+        r = requests.get("https://www.okcoin.com/api/v1/ticker.do?symbol=btc_usd").json()["ticker"]
+        prices['okcoin'] = {'price': float(r['last']), 'volume': float(r['vol'])}
+    except:
+        pass
+    try:
+        r = requests.get("https://www.bitstamp.net/api/v2/ticker/btcusd/").json()
+        prices['bitstamp'] = {'price': float(r['last']), 'volume': float(r['volume'])}
+    except:
+        pass
+    if not prices:
+       raise Exception("All BTC price feeds failed")
+    total_usd = 0
+    total_btc = 0
+    for p in prices.values():
+        total_usd += p['price'] * p['volume']
+        total_btc += p['volume']
+    avg_price = total_usd / total_btc
+    return avg_price
+
+def bts_dex_hist(address):
+    for s in address:
+        try:
+            ws = create_connection(s)
+            login = json.dumps({"jsonrpc": "2.0", "id":1,"method":"call","params":[1,"login",["",""]]})
+            hist_api = json.dumps({"jsonrpc": "2.0", "id":2, "method":"call","params":[1,"history",[]]})
+            btc_hist = json.dumps({"jsonrpc": "2.0", "id": 3, "method": "call", "params": [2, "get_fill_order_history", ["1.3.861", "1.3.973", 50]]})
+            bts_hist = json.dumps({"jsonrpc": "2.0", "id": 4, "method": "call", "params": [2, "get_fill_order_history", ["1.3.0", "1.3.973", 50]]})
+            bts_feed = json.dumps({"jsonrpc": "2.0", "id": 5, "method": "call", "params": [0, "get_objects", [["2.4.3"]]]})
+            ws.send(login)
+            ws.recv()
+            ws.send(hist_api)
+            ws.recv()
+            ws.send(btc_hist)
+            dex_btc_h = json.loads(ws.recv())["result"]
+            ws.send(bts_hist)
+            dex_bts_h = json.loads(ws.recv())["result"]
+            ws.send(bts_feed)
+            bts_btc_feed = json.loads(ws.recv())["result"][0]["current_feed"]["settlement_price"]
+            bts_btc_p = bts_btc_feed["base"]["amount"]/bts_btc_feed["quote"]["amount"]/1000
+            ws.close()
+            return (dex_btc_h, dex_bts_h, bts_btc_p)
+        except:
+            pass
+    raise Exception("All DEX websocket servers are down")
+
+
 
 if __name__ == '__main__':
     print("Connecting to Steem RPC")
     rpc = SteemWalletRPC(rpc_host, rpc_port, "", "")
     try:
         bh = rpc.info()["head_block_num"]
+        bh = 1
         print("Connected. Current block height is " + str(bh))
     except:
         print("Connection error. Check your cli_wallet")
@@ -125,70 +151,91 @@ if __name__ == '__main__':
     if use_telegram == 1:
         try:
             print("Connecting to Telegram")
-            last_update_id = telegram("getUpdates")["result"][-1]["update_id"]
-            payload = {"chat_id":telegram_id, "text":"Connected"}
-            m = telegram("sendMessage", payload)
+            last_update_id = telegram("getMe")
         except:
-            print("Connection error. Check that you had any conversation with your bot")
+            print("Telegram connection error")
             quit()
 
     steem_q = 0
     btc_q = 0
     last_update_t = 0
     interval = rand_interval(interval_init)
-    try:
-        last_price = (requests.get("https://bittrex.com/api/v1.1/public/getticker?market=BTC-STEEM").json()["result"]["Last"])*btc_usd()
-        print("The current market price is " + format(last_price, ".3f") + " USD/STEEM")
-    except:
-        last_price = float(rpc.get_feed_history()["current_median_history"]["base"].split()[0])/float(rpc.get_feed_history()["current_median_history"]["quote"].split()[0])
-        print("Failed to fetch market price. Current median feed price " + format(last_price, ".3f") + " USD/STEEM will be used")
-
-    start_t = (utc_time()//freq)*freq - freq
+    time_adj = time.time() - datetime.datetime.utcnow().timestamp()
+    start_t = (time.time()//freq)*freq - freq
     last_t = start_t - 1
-    print("Please be advised that your first price feed will be published when the price changes over " + format(min_change*100, ".1f") + "% or after " + format(max_age/3600, ".0f") + " hours")
-    init_pub = input("Will you publish this price feed (" + format(last_price, ".3f") + " USD/STEEM)? (y/N) ")
-    if init_pub.lower() == "y":
-        rpc.publish_feed(witness, {"base": format(last_price, ".3f") +" SBD", "quote":"1.000 STEEM"}, True)
-        print("Published price feed: " + format(last_price, ".3f") + " USD/STEEM at " + time.ctime())
-        last_update_t = (utc_time()//freq)*freq - freq
-    else:
-        last_price = 0.0001
-        print("Please confirm your first feed price after " + str(int(interval/60)) + " minutes")
+    last_price = float(rpc.get_feed_history()["current_median_history"]["base"].split()[0])/float(rpc.get_feed_history()["current_median_history"]["quote"].split()[0])
+    print("Current median feed price is " + format(last_price, ".3f") + " USD/STEEM")
 
     while True:
-        curr_t = (utc_time()//freq)*freq - freq
+        curr_t = (time.time()//freq)*freq - freq
         if curr_t > last_t:
+# Bittrex
             try:
-                h = requests.get("https://bittrex.com/api/v1.1/public/getmarkethistory?market=BTC-STEEM")
-                hist = h.json()
-                last_t = curr_t
+                bt_h = requests.get("https://bittrex.com/api/v1.1/public/getmarkethistory?market=BTC-STEEM")
+                bt_hist = bt_h.json()
                 for i in range(200):
-                    strf_t = hist["result"][i]["TimeStamp"]
+                    strf_t = bt_hist["result"][i]["TimeStamp"]
                     unix_t = dateutil.parser.parse(strf_t).timestamp()
+                    unix_t += time_adj
                     if unix_t >= curr_t:
-                        steem_q += hist["result"][i]["Quantity"]
-                        btc_q += hist["result"][i]["Total"]
+                        steem_q += bt_hist["result"][i]["Quantity"]
+                        btc_q += bt_hist["result"][i]["Total"]
+                        pass
                     else:
                         break
             except:
                 print("Error in fetching Bittrex market history")
                 pass
+
+# Poloniex
+            try:
+                po_h = requests.get("https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_STEEM&start="+str(curr_t))
+                po_hist = po_h.json()
+                for i in range(len(po_hist)):
+                    steem_q += float(po_hist[i]["amount"])
+                    btc_q += float(po_hist[i]["total"])
+                    pass
+            except:
+#                print("Error in fetching Poloniex market history")
+                pass
+
+# Bitshares DEX
+            dex_btc_h, dex_bts_h, bts_btc_p = bts_dex_hist(bts_ws)
+            for i in range(50):
+                if (dateutil.parser.parse(dex_btc_h[0]["time"]).timestamp() + time_adj) >= curr_t:
+                    if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
+                        steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
+                        btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
+                    else:
+                        steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
+                        btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8
+            for i in range(50):
+                if (dateutil.parser.parse(dex_bts_h[0]["time"]).timestamp() + time_adj) >= curr_t:
+                    if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
+                        steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3
+                        btc_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/(10**5)*bts_btc_p
+                    else:
+                        steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
+                        btc_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/(10**5)*bts_btc_p
+
+            last_t = curr_t
+
         if curr_t - start_t >= interval:
             if steem_q > 0:
                 price = btc_q/steem_q*btc_usd()
                 price_str = format(price, ".3f")
                 if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
-                    print("No significant price change or the feed is not obsolete")
+                    print("No significant price change and last feed is still valid")
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
                 else:
                     if abs(1 - price/last_price) > manual_conf:
                         if confirm(manual_conf, price_str, last_update_id) is True:
                             rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
-                            print("\nPublished price feed: " + price_str + " USD/STEEM at " + time.ctime())
+                            print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime()+"\n")
                             last_price = price
                     else:
                         rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
-                        print("\nPublished price feed: " + price_str + " USD/STEEM at " + time.ctime())
+                        print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime()+"\n")
                         last_price = price
                     steem_q = 0
                     btc_q = 0
