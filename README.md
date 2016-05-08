@@ -1,3 +1,9 @@
+### Supported Exchanges
+* Bittrex
+* Openledger (BTS-STEEM, Open.BTC-STEEM)
+* Poloniex (Not listed yet)
+
+
 ### Preparation
 To use this price feed script, the following dependencies and packages should be installed.
 
@@ -28,6 +34,7 @@ Then, edit the `steemfeed.py` to configure. We have some items under Config cate
 * `use_telegram`: If you want to use Telegram for confirmation, enter 1
 * `telegram_token`: Create your Telegram bot at @BotFather (https://telegram.me/botfather)
 * `telegram_id`: Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
+* `bts_ws` : List of BitShares Websocket servers
 * `rpc_host`: Your RPC host address
 * `rpc_port`: Your RPC host port
 * `witness`: Enter ***YOUR WITNESS ID*** here
