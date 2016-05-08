@@ -143,7 +143,6 @@ if __name__ == '__main__':
     rpc = SteemWalletRPC(rpc_host, rpc_port, "", "")
     try:
         bh = rpc.info()["head_block_num"]
-        bh = 1
         print("Connected. Current block height is " + str(bh))
     except:
         print("Connection error. Check your cli_wallet")
