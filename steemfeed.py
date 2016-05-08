@@ -129,7 +129,7 @@ def bts_dex_hist(address):
             dex_bts_h = json.loads(ws.recv())["result"]
             ws.send(bts_feed)
             bts_btc_feed = json.loads(ws.recv())["result"][0]["current_feed"]["settlement_price"]
-            bts_btc_p = bts_btc_feed["base"]["amount"]/bts_btc_feed["quote"]["amount"]/1000
+            bts_btc_p = bts_btc_feed["base"]["amount"]/bts_btc_feed["quote"]["amount"]/10**3
             ws.close()
             return (dex_btc_h, dex_bts_h, bts_btc_p)
         except:
@@ -202,7 +202,7 @@ if __name__ == '__main__':
 # Bitshares DEX
             dex_btc_h, dex_bts_h, bts_btc_p = bts_dex_hist(bts_ws)
             for i in range(50):
-                if (dateutil.parser.parse(dex_btc_h[0]["time"]).timestamp() + time_adj) >= curr_t:
+                if (dateutil.parser.parse(dex_btc_h[i]["time"]).timestamp() + time_adj) >= curr_t:
                     if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
                         steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
                         btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
@@ -210,14 +210,13 @@ if __name__ == '__main__':
                         steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
                         btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8
             for i in range(50):
-                if (dateutil.parser.parse(dex_bts_h[0]["time"]).timestamp() + time_adj) >= curr_t:
+                if (dateutil.parser.parse(dex_bts_h[i]["time"]).timestamp() + time_adj) >= curr_t:
                     if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
                         steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3
-                        btc_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/(10**5)*bts_btc_p
+                        btc_q += (float(dex_bts_h[i]["op"]["receives"]["amount"])/10**5)*bts_btc_p
                     else:
                         steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
-                        btc_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/(10**5)*bts_btc_p
-
+                        btc_q += (float(dex_bts_h[i]["op"]["pays"]["amount"])/10**5)*bts_btc_p
             last_t = curr_t
 
         if curr_t - start_t >= interval:
@@ -245,5 +244,5 @@ if __name__ == '__main__':
             interval = rand_interval(interval_init)
             start_t = curr_t
         left_min = (interval - (curr_t - start_t))/60
-        print(str(int(left_min)) + " minutes to next update   \r", end="")
+        print(str(int(left_min)) + " minutes to next update / Volume: " + format(btc_q, ".4f") + " BTC  " + str(int(steem_q)) + " STEEM\r", end="")
         time.sleep(freq*0.7)
