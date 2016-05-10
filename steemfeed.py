@@ -55,11 +55,14 @@ def confirm(pct, p, last_update_id=None):
         payload = {"chat_id":telegram_id, "text":conf_msg, "reply_markup":reply_markup}
         m = telegram("sendMessage", payload)
         while True:
-            updates = telegram("getUpdates", {"offset":last_update_id, "limit": 100})["result"][-1]
+            updates = telegram("getUpdates", {"offset":last_update_id+1, "limit": 100})["result"][-1]
             chat_id = updates["message"]["from"]["id"]
             update_id = updates["update_id"]
-            cmd = updates["message"]["text"]
-            if update_id > last_update_id:
+            try:
+                cmd = updates["message"]["text"]
+            except:
+                cmd = ""
+            if update_id > last_update_id and cmd != "":
                 if chat_id == telegram_id and cmd.lower() == "confirm":
                     payload = {"chat_id":telegram_id, "text":"Publishing confirmed"}
                     m = telegram("sendMessage", payload)
@@ -70,6 +73,10 @@ def confirm(pct, p, last_update_id=None):
                     m = telegram("sendMessage", payload)
                     last_update_id = update_id
                     return False
+                else:
+                    payload = {"chat_id":telegram_id, "text":"Wrong command. Please select confirm or deny"}
+                    m = telegram("sendMessage", payload)
+                    last_update_id = update_id
             time.sleep(3)
 
 def telegram(method, params=None):
@@ -150,7 +157,7 @@ if __name__ == '__main__':
     if use_telegram == 1:
         try:
             print("Connecting to Telegram")
-            last_update_id = telegram("getMe")
+            test = telegram("getMe")
         except:
             print("Telegram connection error")
             quit()
@@ -158,12 +165,14 @@ if __name__ == '__main__':
     steem_q = 0
     btc_q = 0
     last_update_t = 0
+    last_update_id = 0
     interval = rand_interval(interval_init)
     time_adj = time.time() - datetime.datetime.utcnow().timestamp()
     start_t = (time.time()//freq)*freq - freq
     last_t = start_t - 1
-    last_price = float(rpc.get_feed_history()["current_median_history"]["base"].split()[0])/float(rpc.get_feed_history()["current_median_history"]["quote"].split()[0])
-    print("Current median feed price is " + format(last_price, ".3f") + " USD/STEEM")
+    my_info = rpc.get_witness(witness)
+    last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0]) 
+    print("Your last feed price is " + format(last_price, ".3f") + " USD/STEEM")
 
     while True:
         curr_t = (time.time()//freq)*freq - freq
@@ -183,7 +192,7 @@ if __name__ == '__main__':
                     else:
                         break
             except:
-                print("Error in fetching Bittrex market history")
+                print("Error in fetching Bittrex market history              ")
                 pass
 
 # Poloniex
