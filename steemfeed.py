@@ -55,12 +55,13 @@ def confirm(pct, p, last_update_id=None):
         payload = {"chat_id":telegram_id, "text":conf_msg, "reply_markup":reply_markup}
         m = telegram("sendMessage", payload)
         while True:
-            updates = telegram("getUpdates", {"offset":last_update_id+1, "limit": 100})["result"][-1]
-            chat_id = updates["message"]["from"]["id"]
-            update_id = updates["update_id"]
             try:
+                updates = telegram("getUpdates", {"offset":last_update_id+1})["result"][-1]
+                chat_id = updates["message"]["from"]["id"]
+                update_id = updates["update_id"]
                 cmd = updates["message"]["text"]
             except:
+                update_id = 0
                 cmd = ""
             if update_id > last_update_id and cmd != "":
                 if chat_id == telegram_id and cmd.lower() == "confirm":
@@ -165,7 +166,10 @@ if __name__ == '__main__':
     steem_q = 0
     btc_q = 0
     last_update_t = 0
-    last_update_id = 0
+    try:
+        last_update_id = telegram("getUpdates")["result"][-1]["update_id"]
+    except:
+        last_update_id = 0
     interval = rand_interval(interval_init)
     time_adj = time.time() - datetime.datetime.utcnow().timestamp()
     start_t = (time.time()//freq)*freq - freq
