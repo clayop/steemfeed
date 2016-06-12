@@ -221,8 +221,8 @@ if __name__ == '__main__':
             if steem_q > 0:
                 price = btc_q/steem_q*btc_usd()
                 price_str = format(price, ".3f")
-				if price == 0:
-				    price = last_price
+                if price == 0:
+                    price = last_price
                 if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
                     print("No significant price change and last feed is still valid")
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
