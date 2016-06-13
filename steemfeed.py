@@ -55,11 +55,15 @@ def confirm(pct, p, last_update_id=None):
         payload = {"chat_id":telegram_id, "text":conf_msg, "reply_markup":reply_markup}
         m = telegram("sendMessage", payload)
         while True:
-            updates = telegram("getUpdates", {"offset":last_update_id+1, "limit": 100})["result"][-1]
-            chat_id = updates["message"]["from"]["id"]
-            update_id = updates["update_id"]
-            cmd = updates["message"]["text"]
-            if update_id > last_update_id:
+            try:
+                updates = telegram("getUpdates", {"offset":last_update_id+1})["result"][-1]
+                chat_id = updates["message"]["from"]["id"]
+                update_id = updates["update_id"]
+                cmd = updates["message"]["text"]
+            except:
+                update_id = 0
+                cmd = ""
+            if update_id > last_update_id and cmd != "":
                 if chat_id == telegram_id and cmd.lower() == "confirm":
                     payload = {"chat_id":telegram_id, "text":"Publishing confirmed"}
                     m = telegram("sendMessage", payload)
@@ -70,6 +74,10 @@ def confirm(pct, p, last_update_id=None):
                     m = telegram("sendMessage", payload)
                     last_update_id = update_id
                     return False
+                else:
+                    payload = {"chat_id":telegram_id, "text":"Wrong command. Please select confirm or deny"}
+                    m = telegram("sendMessage", payload)
+                    last_update_id = update_id
             time.sleep(3)
 
 def telegram(method, params=None):
@@ -132,9 +140,8 @@ def bts_dex_hist(address):
             bts_btc_p = bts_btc_feed["base"]["amount"]/bts_btc_feed["quote"]["amount"]/10**3
             ws.close()
             return (dex_btc_h, dex_bts_h, bts_btc_p)
-		except:
+        except:
             return (0, 0, 0)
-
 
 
 if __name__ == '__main__':
@@ -149,7 +156,7 @@ if __name__ == '__main__':
     if use_telegram == 1:
         try:
             print("Connecting to Telegram")
-            last_update_id = telegram("getMe")
+            test = telegram("getMe")
         except:
             print("Telegram connection error")
             quit()
@@ -157,12 +164,17 @@ if __name__ == '__main__':
     steem_q = 0
     btc_q = 0
     last_update_t = 0
+    try:
+        last_update_id = telegram("getUpdates")["result"][-1]["update_id"]
+    except:
+        last_update_id = 0
     interval = rand_interval(interval_init)
     time_adj = time.time() - datetime.datetime.utcnow().timestamp()
     start_t = (time.time()//freq)*freq - freq
     last_t = start_t - 1
-    last_price = float(rpc.get_feed_history()["current_median_history"]["base"].split()[0])/float(rpc.get_feed_history()["current_median_history"]["quote"].split()[0])
-    print("Current median feed price is " + format(last_price, ".3f") + " USD/STEEM")
+    my_info = rpc.get_witness(witness)
+    last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0]) 
+    print("Your last feed price is " + format(last_price, ".3f") + " USD/STEEM")
 
     while True:
         curr_t = (time.time()//freq)*freq - freq
@@ -182,7 +194,7 @@ if __name__ == '__main__':
                     else:
                         break
             except:
-                print("Error in fetching Bittrex market history")
+                print("Error in fetching Bittrex market history              ")
                 pass
 
 # Poloniex
@@ -221,8 +233,6 @@ if __name__ == '__main__':
             if steem_q > 0:
                 price = btc_q/steem_q*btc_usd()
                 price_str = format(price, ".3f")
-                if price == 0:
-                    price = last_price
                 if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
                     print("No significant price change and last feed is still valid")
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
