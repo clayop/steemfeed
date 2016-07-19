@@ -12,6 +12,8 @@ To use this price feed script, the following dependencies and packages should be
     sudo pip3 install websocket-client
     sudo pip3 install steem
 
+(if you got an error during installing steem, run ``sudo pip3 install upgrade pip``)
+
 In addition, you should run cli_wallet by using the following command,
 
     cli_wallet -s ws://localhost:8090 -H 127.0.0.1:8092 --rpc-http-allowip=127.0.0.1
