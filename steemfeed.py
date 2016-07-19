@@ -206,7 +206,7 @@ if __name__ == '__main__':
                     btc_q += float(po_hist[i]["total"])
                     pass
             except:
-#                print("Error in fetching Poloniex market history")
+                print("Error in fetching Poloniex market history")
                 pass
 
 # Bitshares DEX
