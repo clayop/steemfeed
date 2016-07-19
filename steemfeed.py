@@ -173,7 +173,10 @@ if __name__ == '__main__':
     start_t = (time.time()//freq)*freq - freq
     last_t = start_t - 1
     my_info = rpc.get_witness(witness)
-    last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0]) 
+    if float(my_info["sbd_exchange_rate"]["quote"] == 0:
+        last_price = 0
+    else:
+        last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0]) 
     print("Your last feed price is " + format(last_price, ".3f") + " USD/STEEM")
 
     while True:
