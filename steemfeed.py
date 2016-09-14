@@ -19,7 +19,7 @@ manual_conf    = 0.30                # Maximum price change without manual confi
 use_telegram   = 0                   # If 1, you can confirm manual price feed through Telegram
 telegram_token = "telegram_token"    # Create your Telegram bot at @BotFather (https://t$
 telegram_id    = 0                   # Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
-bts_ws         = ["wss://dele-puppy.com/ws", "wss://bitshares.openledger.info/ws", "wss://valen-tin.fr:8090/ws"]
+bts_ws         = ["wss://bitshares.openledger.info/ws", "wss://valen-tin.fr:8090/ws"]
 rpc_host       = "localhost"
 rpc_port       = 8092
 witness        = "yourwitness"       # Your witness name
@@ -215,22 +215,23 @@ if __name__ == '__main__':
 
 # Bitshares DEX
             dex_btc_h, dex_bts_h, bts_btc_p = bts_dex_hist(bts_ws)
-            for i in range(50):
-                if (dateutil.parser.parse(dex_btc_h[i]["time"]).timestamp() + time_adj) >= curr_t:
-                    if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                        steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
-                        btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
-                    else:
-                        steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
-                        btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8
-            for i in range(50):
-                if (dateutil.parser.parse(dex_bts_h[i]["time"]).timestamp() + time_adj) >= curr_t:
-                    if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                        steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3
-                        btc_q += (float(dex_bts_h[i]["op"]["receives"]["amount"])/10**5)*bts_btc_p
-                    else:
-                        steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
-                        btc_q += (float(dex_bts_h[i]["op"]["pays"]["amount"])/10**5)*bts_btc_p
+            if dex_btc_h != 0 and dex_bts_h != 0 and bts_btc_p !=0:
+                for i in range(50):
+                    if (dateutil.parser.parse(dex_btc_h[i]["time"]).timestamp() + time_adj) >= curr_t:
+                        if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
+                            steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
+                            btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
+                        else:
+                            steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
+                            btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8
+                for i in range(50):
+                    if (dateutil.parser.parse(dex_bts_h[i]["time"]).timestamp() + time_adj) >= curr_t:
+                        if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
+                            steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3
+                            btc_q += (float(dex_bts_h[i]["op"]["receives"]["amount"])/10**5)*bts_btc_p
+                        else:
+                            steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
+                            btc_q += (float(dex_bts_h[i]["op"]["pays"]["amount"])/10**5)*bts_btc_p
             last_t = curr_t
 
         if curr_t - start_t >= interval:
