@@ -1,4 +1,3 @@
-from __future__ import print_function
 import time, datetime
 import dateutil.parser
 import requests
@@ -10,6 +9,7 @@ from steemapi import SteemWalletRPC
 
 # Config
 
+discount       = 0.10                # Discount rate (e.g. 0.10 means published price feed is 10% smaller than market price)
 interval_init  = 60*60*2             # Feed publishing interval in seconds
 rand_level     = 0.10                # Degree of randomness of interval
 freq           = 60                  # Frequency of parsing trade histories
@@ -57,7 +57,7 @@ def confirm(pct, p, last_update_id=None):
         m = telegram("sendMessage", payload)
         while True:
             try:
-                updates = telegram("getUpdates", {"offset":last_update_id+1})["result"][-1]
+                updates = telegram("getUpdates", {"offset":last_update_id-1})["result"][-1]
                 chat_id = updates["message"]["from"]["id"]
                 update_id = updates["update_id"]
                 cmd = updates["message"]["text"]
@@ -162,6 +162,9 @@ if __name__ == '__main__':
             print("Telegram connection error")
             quit()
 
+    if discount > 0.3:
+        print("The discount rate is too big. Please check your discount rate")
+        exit()
     steem_q = 0
     btc_q = 0
     last_update_t = 0
@@ -210,34 +213,39 @@ if __name__ == '__main__':
                     btc_q += float(po_hist[i]["total"])
                     pass
             except:
-                print("Error in fetching Poloniex market history")
+#                print("Error in fetching Poloniex market history")
                 pass
 
 # Bitshares DEX
-            dex_btc_h, dex_bts_h, bts_btc_p = bts_dex_hist(bts_ws)
-            if dex_btc_h != 0 and dex_bts_h != 0 and bts_btc_p !=0:
-                for i in range(50):
-                    if (dateutil.parser.parse(dex_btc_h[i]["time"]).timestamp() + time_adj) >= curr_t:
-                        if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                            steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
-                            btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
-                        else:
-                            steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
-                            btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8
-                for i in range(50):
-                    if (dateutil.parser.parse(dex_bts_h[i]["time"]).timestamp() + time_adj) >= curr_t:
-                        if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                            steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3
-                            btc_q += (float(dex_bts_h[i]["op"]["receives"]["amount"])/10**5)*bts_btc_p
-                        else:
-                            steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
-                            btc_q += (float(dex_bts_h[i]["op"]["pays"]["amount"])/10**5)*bts_btc_p
+            try:
+                dex_btc_h, dex_bts_h, bts_btc_p = bts_dex_hist(bts_ws)
+                if dex_btc_h != 0 and dex_bts_h != 0 and bts_btc_p !=0:
+                    for i in range(50):
+                        if (dateutil.parser.parse(dex_btc_h[i]["time"]).timestamp() + time_adj) >= curr_t:
+                            if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
+                        #        steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
+                                btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
+                            else:
+                                steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
+                                btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8
+                    for i in range(50):
+                        if (dateutil.parser.parse(dex_bts_h[i]["time"]).timestamp() + time_adj) >= curr_t:
+                            if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
+                                steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3
+                                btc_q += (float(dex_bts_h[i]["op"]["receives"]["amount"])/10**5)*bts_btc_p
+                            else:
+                                steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
+                                btc_q += (float(dex_bts_h[i]["op"]["pays"]["amount"])/10**5)*bts_btc_p
+            except:
+                print("Error in fetching DEX market history              ")
+                pass 
+# Current time update
             last_t = curr_t
 
         if curr_t - start_t >= interval:
             if steem_q > 0:
                 price = btc_q/steem_q*btc_usd()
-                price_str = format(price, ".3f")
+                price_str = format(price*(1-discount), ".3f")
                 if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
                     print("No significant price change and last feed is still valid")
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
