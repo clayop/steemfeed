@@ -9,7 +9,7 @@ from steemapi import SteemWalletRPC
 
 # Config
 
-discount       = 0.10                # Discount rate (e.g. 0.10 means published price feed is 10% smaller than market price)
+discount       = 0.00                # Discount rate (e.g. 0.10 means published price feed is 10% smaller than market price)
 interval_init  = 60*60*2             # Feed publishing interval in seconds
 rand_level     = 0.10                # Degree of randomness of interval
 freq           = 60                  # Frequency of parsing trade histories
@@ -162,7 +162,7 @@ if __name__ == '__main__':
             print("Telegram connection error")
             quit()
 
-    if discount > 0.3:
+    if abs(discount) > 0.3:
         print("The discount rate is too big. Please check your discount rate")
         exit()
     steem_q = 0
