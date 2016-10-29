@@ -162,7 +162,7 @@ if __name__ == '__main__':
             print("Telegram connection error")
             quit()
 
-    if abs(discount) > 0.3:
+    if discount > 0.3:
         print("The discount rate is too big. Please check your discount rate")
         exit()
     steem_q = 0
@@ -245,18 +245,19 @@ if __name__ == '__main__':
         if curr_t - start_t >= interval:
             if steem_q > 0:
                 price = btc_q/steem_q*btc_usd()
-                price_str = format(price*(1-discount), ".3f")
+                price_str = format(price, ".3f")
+                bias = format((1+discount), ".3f")
                 if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
                     print("No significant price change and last feed is still valid")
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
                 else:
                     if abs(1 - price/last_price) > manual_conf:
                         if confirm(manual_conf, price_str, last_update_id) is True:
-                            rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
+                            rpc.publish_feed(witness, {"base": price_str +" SBD", "quote": bias + " STEEM"}, True)
                             print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime()+"\n")
                             last_price = price
                     else:
-                        rpc.publish_feed(witness, {"base": price_str +" SBD", "quote":"1.000 STEEM"}, True)
+                        rpc.publish_feed(witness, {"base": price_str +" SBD", "quote": bias + " STEEM"}, True)
                         print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime()+"\n")
                         last_price = price
                     steem_q = 0
