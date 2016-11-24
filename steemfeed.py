@@ -223,7 +223,7 @@ if __name__ == '__main__':
                     for i in range(50):
                         if (dateutil.parser.parse(dex_btc_h[i]["time"]).timestamp() + time_adj) >= curr_t:
                             if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                        #        steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
+                                steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
                                 btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
                             else:
                                 steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
