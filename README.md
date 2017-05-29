@@ -23,6 +23,11 @@ To use this price feed script, the following dependencies and packages should be
 
 _You can find more info about `steem` [here](https://github.com/steemit/steem-python)_
 
+Then, edit `~/witness_node_data_dir/config.ini` and make sure to add required APIs:
+```
+public-api = database_api login_api network_broadcast_api
+```
+
 
 ### Installation
 Copy the code in [this link](https://github.com/clayop/steemfeed/blob/master/steemfeed.py) and paste as `steemfeed.py` in your witness server.
