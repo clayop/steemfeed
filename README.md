@@ -21,6 +21,7 @@ To use this price feed script, the following dependencies and packages should be
 
 (if you got an error during installing steem, run ``sudo pip3 install upgrade pip``)
 
+_You can find more info about `steem` [here](https://github.com/steemit/steem-python)_
 
 
 ### Installation
