@@ -1,8 +1,13 @@
 ### Supported Exchanges
 * Bittrex
+* Poloniex
 * Openledger (BTS-STEEM, Open.BTC-STEEM)
-* Poloniex (Not listed yet)
 
+*** BTC Price Sources
+* Bitfinex
+* Gdax(coinbase)
+* Okcoin
+* Bitstamp
 
 ### Preparation
 To use this price feed script, the following dependencies and packages should be installed.
@@ -10,15 +15,12 @@ To use this price feed script, the following dependencies and packages should be
     sudo apt-get install libffi-dev libssl-dev python3-dev python3-pip
     sudo pip3 install python-dateutil
     sudo pip3 install websocket-client
-    sudo pip3 install steem
+    sudo pip3 install requests
+    sudo pip3 install pycrypto
+    sudo pip install -U steem
 
 (if you got an error during installing steem, run ``sudo pip3 install upgrade pip``)
 
-In addition, you should run cli_wallet by using the following command,
-
-    cli_wallet -s ws://localhost:8090 -H 127.0.0.1:8092 --rpc-http-allowip=127.0.0.1
-
-And unlock your cli_wallet.
 
 
 ### Installation
@@ -26,24 +28,21 @@ Copy the code in [this link](https://github.com/clayop/steemfeed/blob/master/ste
 
 
 ### Configuration
-Then, edit the `steemfeed.py` to configure. We have some items under Config category in the code.
+Then, edit `steemfeed_config.yml` to configure. It has some items under Config category in the code.
 
-* `interval`: Interval of publishing price feed. The default value is one hour (3600 seconds)
+* `discount`: Discount rate (e.g. 0.10 means published price feed is 10% smaller than market price)
+* `interval_init`: Feed publishing interval in seconds
+* `rand_level`: Degree of randomness of interval
 * `freq`: Frequency of parsing trade history. Please be noticed that it can parse only 200 last trading history (Bittrex), so as trading is active you may need to decrease this frequency value.
 * `min_change`: Minimum price change percentage to publish feed
 * `max_age`: Maximum age of price feed
-* `manual_conf`: Maximum price change without manual confirmation. If price change exceeds this, you will be asked to confirm
-* `use_telegram`: If you want to use Telegram for confirmation, enter 1
-* `telegram_token`: Create your Telegram bot at @BotFather (https://telegram.me/botfather)
-* `telegram_id`: Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
 * `bts_ws` : List of BitShares Websocket servers
-* `rpc_host`: Your RPC host address
-* `rpc_port`: Your RPC host port
 * `witness`: Enter ***YOUR WITNESS ID*** here
- 
+ * `wif`: Leave it empty. You will add your key with encryption when run the script first time
 
 ### Run
 Then, run this code in a separate screen
 
     screen -S steemfeed
     python3 ./steemfeed.py
+(If it gives you permission error, run in `sudo`)
