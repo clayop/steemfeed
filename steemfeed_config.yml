@@ -1,0 +1,10 @@
+steemnode      : "127.0.0.1:8090"
+discount       : 0.00                # Discount rate (e.g. 0.10 means published price feed is 10% smaller than market price)
+interval_init  : 3600                # Feed publishing interval in seconds
+rand_level     : 0.10                # Degree of randomness of interval
+freq           : 60                  # Frequency of parsing trade histories
+min_change     : 0.02                # Minimum price change to publish feed
+max_age        : 86400               # Maximum age of price feed
+bts_ws         : ["wss://bitshares.openledger.info/ws", "wss://valen-tin.fr:8090/ws"]
+witness        : "YOURWITNESS"            # Your witness name
+wif            : ""
