@@ -3,7 +3,7 @@
 * Poloniex
 * Openledger (BTS-STEEM, Open.BTC-STEEM)
 
-*** BTC Price Sources
+### BTC Price Sources
 * Bitfinex
 * Gdax(coinbase)
 * Okcoin
