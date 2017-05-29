@@ -1,3 +1,4 @@
+from steem import Steem
 import time, datetime
 import dateutil.parser
 import requests
@@ -5,24 +6,19 @@ import random
 import json
 import websocket
 from websocket import create_connection
-from steemapi import SteemWalletRPC
+from Crypto.Cipher import XOR
+import base64
+import yaml
+import getpass
 
-# Config
 
-discount       = 0.00                # Discount rate (e.g. 0.10 means published price feed is 10% smaller than market price)
-interval_init  = 60*60*2             # Feed publishing interval in seconds
-rand_level     = 0.10                # Degree of randomness of interval
-freq           = 60                  # Frequency of parsing trade histories
-min_change     = 0.03                # Minimum price change to publish feed
-max_age        = 60*60*24            # Maximum age of price feed
-manual_conf    = 0.30                # Maximum price change without manual confirmation
-use_telegram   = 0                   # If 1, you can confirm manual price feed through Telegram
-telegram_token = "telegram_token"    # Create your Telegram bot at @BotFather (https://t$
-telegram_id    = 0                   # Get your telegram id at @MyTelegramID_bot (https://telegram.me/mytelegramid_bot)
-bts_ws         = ["wss://bitshares.openledger.info/ws", "wss://valen-tin.fr:8090/ws"]
-rpc_host       = "localhost"
-rpc_port       = 8092
-witness        = "yourwitness"       # Your witness name
+def encrypt(key, plaintext):
+  cipher = XOR.new(key)
+  return base64.b64encode(cipher.encrypt(plaintext))
+
+def decrypt(key, ciphertext):
+  cipher = XOR.new(key)
+  return cipher.decrypt(base64.b64decode(ciphertext))
 
 def rand_interval(intv):
     intv += intv*rand_level*random.uniform(-1, 1)
@@ -32,61 +28,6 @@ def rand_interval(intv):
         intv = 60*60*24*7
     return(int(intv))
 
-def confirm(pct, p, last_update_id=None):
-    if use_telegram == 0:
-        conf = input("Your price feed change is over " + format(pct*100, ".1f") + "% (" + p + " USD/STEEM) If you confirm this, type 'confirm': ")
-        if conf.lower() == "confirm":
-            return True
-        else:
-            reconf = input("You denied to publish this feed. Are you sure? (Y/n): ")
-            if reconf.lower() == "n":
-                conf = input("If you confirm this, type 'confirm': ")
-                if conf.lower() == "confirm":
-                    return True
-                else:
-                    print("Publishing denied")
-                    return False
-            else:
-                print("Publishing denied")
-                return False
-    elif use_telegram == 1:
-        custom_keyboard = [["deny"]]
-        reply_markup = json.dumps({"keyboard":custom_keyboard, "resize_keyboard": True})
-        conf_msg = ("Your price feed change is over " + format(pct*100, ".1f") + "% (" + p + " USD/STEEM) If you confirm this, type 'confirm'")
-        payload = {"chat_id":telegram_id, "text":conf_msg, "reply_markup":reply_markup}
-        m = telegram("sendMessage", payload)
-        while True:
-            try:
-                updates = telegram("getUpdates", {"offset":last_update_id-1})["result"][-1]
-                chat_id = updates["message"]["from"]["id"]
-                update_id = updates["update_id"]
-                cmd = updates["message"]["text"]
-            except:
-                update_id = 0
-                cmd = ""
-            if update_id > last_update_id and cmd != "":
-                if chat_id == telegram_id and cmd.lower() == "confirm":
-                    payload = {"chat_id":telegram_id, "text":"Publishing confirmed"}
-                    m = telegram("sendMessage", payload)
-                    last_update_id = update_id
-                    return True
-                elif chat_id == telegram_id and cmd.lower() == "deny":
-                    payload = {"chat_id":telegram_id, "text":"Publishing denied"}
-                    m = telegram("sendMessage", payload)
-                    last_update_id = update_id
-                    return False
-                else:
-                    payload = {"chat_id":telegram_id, "text":"Wrong command. Please select confirm or deny"}
-                    m = telegram("sendMessage", payload)
-                    last_update_id = update_id
-            time.sleep(3)
-
-def telegram(method, params=None):
-    url = "https://api.telegram.org/bot"+telegram_token+"/"
-    params = params
-    r = requests.get(url+method, params = params).json()
-    return r
-
 def btc_usd():
     prices = {}
     try:
@@ -95,7 +36,7 @@ def btc_usd():
     except:
         pass
     try:
-        r = requests.get("https://api.exchange.coinbase.com/products/BTC-USD/ticker").json()
+        r = requests.get("https://api.gdax.com/products/BTC-USD/ticker").json()
         prices['coinbase'] = {'price': float(r['price']), 'volume': float(r['volume'])}
     except:
         pass
@@ -144,43 +85,57 @@ def bts_dex_hist(address):
         except:
             return (0, 0, 0)
 
+def publish_feed(base, quote, account):
+    steem.commit.witness_feed_publish(base, quote=quote, account=account)
+    print("Published price feed: " + format(base/quote, ".3f") + " USD/STEEM at " + time.ctime()+"\n")
+
 
 if __name__ == '__main__':
-    print("Connecting to Steem RPC")
-    rpc = SteemWalletRPC(rpc_host, rpc_port, "", "")
+    config_file = open("steemfeed_config.yml", "r")
+    steemfeed_config = yaml.load(config_file)
+    pw             = getpass.getpass("Enter your password: ")
+    steemnode      = steemfeed_config["steemnode"]
+    discount       = float(steemfeed_config["discount"])
+    interval_init  = float(steemfeed_config["interval_init"])
+    rand_level     = float(steemfeed_config["rand_level"])
+    freq           = float(steemfeed_config["freq"])
+    min_change     = float(steemfeed_config["min_change"])
+    max_age        = float(steemfeed_config["max_age"])
+    bts_ws         = steemfeed_config["bts_ws"]
+    witness        = steemfeed_config["witness"]
+    if steemfeed_config["wif"] == "":
+        pw = getpass.getpass("Enter your password: ")
+        repw = getpass.getpass("Confirm your password: ")
+        if pw == repw:
+            config_file.close()
+            activekey = getpass.getpass("Enter active private key of your witness: ")
+            steemfeed_config["wif"] = encrypt(pw, str(activekey)).decode()
+            with open("steemfeed_config.yml", "w") as config_file:
+                yaml.dump(steemfeed_config, config_file, default_flow_style=False)
+            config_file = open("steemfeed_config.yml", "r")
+            steemfeed_config = yaml.load(config_file)
+    wif = decrypt(pw, steemfeed_config["wif"]).decode()
+    pw = ""
+    steem = Steem(nodes=[steemnode], keys=[wif])
     try:
-        bh = rpc.info()["head_block_num"]
+        bh = steem.get_dynamic_global_properties()["head_block_number"]
         print("Connected. Current block height is " + str(bh))
     except:
-        print("Connection error. Check your cli_wallet")
+        print("Connection error. Check your node")
         quit()
-    if use_telegram == 1:
-        try:
-            print("Connecting to Telegram")
-            test = telegram("getMe")
-        except:
-            print("Telegram connection error")
-            quit()
 
-    if discount > 0.3:
-        print("The discount rate is too big. Please check your discount rate")
-        exit()
     steem_q = 0
     btc_q = 0
     last_update_t = 0
-    try:
-        last_update_id = telegram("getUpdates")["result"][-1]["update_id"]
-    except:
-        last_update_id = 0
     interval = rand_interval(interval_init)
     time_adj = time.time() - datetime.datetime.utcnow().timestamp()
     start_t = (time.time()//freq)*freq - freq
     last_t = start_t - 1
-    my_info = rpc.get_witness(witness)
+    my_info = steem.get_witness_by_account(witness)
     if float(my_info["sbd_exchange_rate"]["quote"].split()[0]) == 0:
         last_price = 0
     else:
-        last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0]) 
+        last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0])
     print("Your last feed price is " + format(last_price, ".3f") + " USD/STEEM")
 
     while True:
@@ -201,7 +156,7 @@ if __name__ == '__main__':
                     else:
                         break
             except:
-                print("Error in fetching Bittrex market history              ")
+                print("Error in fetching Bittrex market history")
                 pass
 
 # Poloniex
@@ -213,7 +168,7 @@ if __name__ == '__main__':
                     btc_q += float(po_hist[i]["total"])
                     pass
             except:
-#                print("Error in fetching Poloniex market history")
+                print("Error in fetching Poloniex market history")
                 pass
 
 # Bitshares DEX
@@ -237,36 +192,41 @@ if __name__ == '__main__':
                                 steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
                                 btc_q += (float(dex_bts_h[i]["op"]["pays"]["amount"])/10**5)*bts_btc_p
             except:
-                print("Error in fetching DEX market history              ")
-                pass 
+                print("Error in fetching DEX market history")
+                pass
 # Current time update
-            last_t = curr_t
+            last_t = (time.time()//freq)*freq - freq
 
         if curr_t - start_t >= interval:
             if steem_q > 0:
-                price = btc_q/steem_q*btc_usd()
+                base = btc_q/steem_q*btc_usd()
+                quote = 1/(1-discount)
+                price = base/quote
                 price_str = format(price, ".3f")
-                bias = format((1/(1-discount)), ".3f")
                 if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
                     print("No significant price change and last feed is still valid")
                     print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
                 else:
-                    if abs(1 - price/last_price) > manual_conf:
-                        if confirm(manual_conf, price_str, last_update_id) is True:
-                            rpc.publish_feed(witness, {"base": price_str +" SBD", "quote": bias + " STEEM"}, True)
-                            print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime()+"\n")
-                            last_price = price
-                    else:
-                        rpc.publish_feed(witness, {"base": price_str +" SBD", "quote": bias + " STEEM"}, True)
-                        print("Published price feed: " + price_str + " USD/STEEM at " + time.ctime()+"\n")
-                        last_price = price
+                    publish_feed(base, quote, witness)
+                    last_price = price
                     steem_q = 0
                     btc_q = 0
-                    last_update_t = curr_t
+                    last_update_t = (time.time()//freq)*freq - freq
             else:
                 print("No trades occured during this period")
             interval = rand_interval(interval_init)
-            start_t = curr_t
+            start_t = (time.time()//freq)*freq - freq
+            with open("steemfeed_config.yml", "r") as config_file:
+                steemfeed_config = yaml.load(config_file)
+                steemnode      = steemfeed_config["steemnode"]
+                discount       = steemfeed_config["discount"]
+                interval_init  = steemfeed_config["interval_init"]
+                rand_level     = steemfeed_config["rand_level"]
+                freq           = steemfeed_config["freq"]
+                min_change     = steemfeed_config["min_change"]
+                max_age        = steemfeed_config["max_age"]
+                bts_ws         = steemfeed_config["bts_ws"]
+
         left_min = (interval - (curr_t - start_t))/60
-        print(str(int(left_min)) + " minutes to next update / Volume: " + format(btc_q, ".4f") + " BTC  " + str(int(steem_q)) + " STEEM\r", end="")
+        print("%s minutes to next update / Volume: %s BTC, %s STEEM / Average Price: %s\r", end="" % (str(int(left_min)), format(btc_q, ".4f"), str(int(steem_q)), format(btc_q/steem_q, ".8f")))
         time.sleep(freq*0.7)
