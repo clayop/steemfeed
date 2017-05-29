@@ -228,6 +228,6 @@ if __name__ == '__main__':
                 bts_ws         = steemfeed_config["bts_ws"]
 
         left_min = (interval - (curr_t - start_t))/60
-        if steemq > 0:
+        if steem_q > 0:
             print("%s minutes to next update / Volume: %s BTC, %s STEEM / Average Price: %s\r" % (str(int(left_min)), format(btc_q, ".4f"), str(int(steem_q)), format(btc_q/steem_q, ".8f")), end="")
         time.sleep(freq*0.7)
