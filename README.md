@@ -17,6 +17,7 @@ To use this price feed script, the following dependencies and packages should be
     sudo pip3 install websocket-client
     sudo pip3 install requests
     sudo pip3 install pycrypto
+    sudo pip3 install pyyaml
     sudo pip install -U steem
 
 (if you got an error during installing steem, run ``sudo pip3 install upgrade pip``)
