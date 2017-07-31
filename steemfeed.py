@@ -28,26 +28,26 @@ def rand_interval(intv):
         intv = 60*60*24*7
     return(int(intv))
 
-def btc_usd():
+def btc_usd(exchange_w):
     prices = {}
     try:
         r = requests.get("https://api.bitfinex.com/v1/pubticker/BTCUSD").json()
-        prices['bitfinex'] = {'price': float(r['last_price']), 'volume': float(r['volume'])}
+        prices['bitfinex'] = {'price': float(r['last_price']), 'volume': float(r['volume']), 'weight':float(exchange_w['bitfinex'])}
     except:
         pass
     try:
         r = requests.get("https://api.gdax.com/products/BTC-USD/ticker").json()
-        prices['coinbase'] = {'price': float(r['price']), 'volume': float(r['volume'])}
+        prices['coinbase'] = {'price': float(r['price']), 'volume': float(r['volume']), 'weight':float(exchange_w['coinbase'])}
     except:
         pass
     try:
         r = requests.get("https://www.okcoin.com/api/v1/ticker.do?symbol=btc_usd").json()["ticker"]
-        prices['okcoin'] = {'price': float(r['last']), 'volume': float(r['vol'])}
+        prices['okcoin'] = {'price': float(r['last']), 'volume': float(r['vol']), 'weight':float(exchange_w['okcoin'])}
     except:
         pass
     try:
         r = requests.get("https://www.bitstamp.net/api/v2/ticker/btcusd/").json()
-        prices['bitstamp'] = {'price': float(r['last']), 'volume': float(r['volume'])}
+        prices['bitstamp'] = {'price': float(r['last']), 'volume': float(r['volume']), 'weight':float(exchange_w['bitstamp'])}
     except:
         pass
     if not prices:
@@ -101,6 +101,7 @@ if __name__ == '__main__':
     freq           = float(steemfeed_config["freq"])
     min_change     = float(steemfeed_config["min_change"])
     max_age        = float(steemfeed_config["max_age"])
+    exchange_w     = steemfeed_config["exchange_w"]
     bts_ws         = steemfeed_config["bts_ws"]
     witness        = steemfeed_config["witness"]
     if steemfeed_config["wif"] == "":
@@ -142,66 +143,70 @@ if __name__ == '__main__':
         curr_t = (time.time()//freq)*freq - freq
         if curr_t > last_t:
 # Bittrex
-            try:
-                bt_h = requests.get("https://bittrex.com/api/v1.1/public/getmarkethistory?market=BTC-STEEM")
-                bt_hist = bt_h.json()
-                for i in range(200):
-                    strf_t = bt_hist["result"][i]["TimeStamp"]
-                    unix_t = dateutil.parser.parse(strf_t).timestamp()
-                    unix_t += time_adj
-                    if unix_t >= curr_t:
-                        steem_q += bt_hist["result"][i]["Quantity"]
-                        btc_q += bt_hist["result"][i]["Total"]
-                        pass
-                    else:
-                        break
-            except:
-                print("Error in fetching Bittrex market history")
-                pass
+            if float(exchange_w["bittrex"]) > 0:
+                try:
+                    bt_h = requests.get("https://bittrex.com/api/v1.1/public/getmarkethistory?market=BTC-STEEM")
+                    bt_hist = bt_h.json()
+                    for i in range(200):
+                        strf_t = bt_hist["result"][i]["TimeStamp"]
+                        unix_t = dateutil.parser.parse(strf_t).timestamp()
+                        unix_t += time_adj
+                        if unix_t >= curr_t:
+                            steem_q += bt_hist["result"][i]["Quantity"]*float(exchange_w["bittrex"])
+                            btc_q += bt_hist["result"][i]["Total"]*float(exchange_w["bittrex"])
+                            pass
+                        else:
+                            break
+                except:
+                    print("Error in fetching Bittrex market history")
+                    pass
 
 # Poloniex
-            try:
-                po_h = requests.get("https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_STEEM&start="+str(curr_t))
-                po_hist = po_h.json()
-                for i in range(len(po_hist)):
-                    steem_q += float(po_hist[i]["amount"])
-                    btc_q += float(po_hist[i]["total"])
+            if float(exchange_w["poloniex"]) > 0:
+                try:
+                    po_h = requests.get("https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_STEEM&start="+str(curr_t))
+                    po_hist = po_h.json()
+                    for i in range(len(po_hist)):
+                        steem_q += float(po_hist[i]["amount"])*float(exchange_w["poloniex"])
+                        btc_q += float(po_hist[i]["total"])*float(exchange_w["poloniex"])
+                        pass
+                except:
+                    print("Error in fetching Poloniex market history")
                     pass
-            except:
-                print("Error in fetching Poloniex market history")
-                pass
 
 # Bitshares DEX
-            try:
-                dex_btc_h, dex_bts_h, bts_btc_p = bts_dex_hist(bts_ws)
-                if dex_btc_h != 0 and dex_bts_h != 0 and bts_btc_p !=0:
-                    for i in range(50):
-                        if (dateutil.parser.parse(dex_btc_h[i]["time"]).timestamp() + time_adj) >= curr_t:
-                            if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                                steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3
-                                btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8
-                            else:
-                                steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3
-                                btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8
-                    for i in range(50):
-                        if (dateutil.parser.parse(dex_bts_h[i]["time"]).timestamp() + time_adj) >= curr_t:
-                            if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
-                                steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3
-                                btc_q += (float(dex_bts_h[i]["op"]["receives"]["amount"])/10**5)*bts_btc_p
-                            else:
-                                steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3
-                                btc_q += (float(dex_bts_h[i]["op"]["pays"]["amount"])/10**5)*bts_btc_p
-            except:
-                print("Error in fetching DEX market history")
-                pass
+            if float(exchange_w["btsdex"]) > 0:
+                try:
+                    dex_btc_h, dex_bts_h, bts_btc_p = bts_dex_hist(bts_ws)
+                    if dex_btc_h != 0 and dex_bts_h != 0 and bts_btc_p !=0:
+                        for i in range(50):
+                            if (dateutil.parser.parse(dex_btc_h[i]["time"]).timestamp() + time_adj) >= curr_t:
+                                if dex_btc_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
+                                    steem_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**3*float(exchange_w["btsdex"])
+                                    btc_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**8*float(exchange_w["btsdex"])
+                                else:
+                                    steem_q += float(dex_btc_h[i]["op"]["receives"]["amount"])/10**3*float(exchange_w["btsdex"])
+                                    btc_q += float(dex_btc_h[i]["op"]["pays"]["amount"])/10**8*float(exchange_w["btsdex"])
+                        for i in range(50):
+                            if (dateutil.parser.parse(dex_bts_h[i]["time"]).timestamp() + time_adj) >= curr_t:
+                                if dex_bts_h[i]["op"]["pays"]["asset_id"] == "1.3.973":
+                                    steem_q += float(dex_bts_h[i]["op"]["pays"]["amount"])/10**3*float(exchange_w["btsdex"])
+                                    btc_q += (float(dex_bts_h[i]["op"]["receives"]["amount"])/10**5)*bts_btc_p*float(exchange_w["btsdex"])
+                                else:
+                                    steem_q += float(dex_bts_h[i]["op"]["receives"]["amount"])/10**3*float(exchange_w["btsdex"])
+                                    btc_q += (float(dex_bts_h[i]["op"]["pays"]["amount"])/10**5)*bts_btc_p*float(exchange_w["btsdex"])
+                except:
+                    print("Error in fetching DEX market history")
+                    pass
 # Current time update
             last_t = (time.time()//freq)*freq - freq
 
         if curr_t - start_t >= interval:
             if steem_q > 0:
-                base = btc_q/steem_q*btc_usd()
+                base = btc_q/steem_q*btc_usd(exchange_w)
                 quote = 1/(1-discount)
                 price = base/quote
+                last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0])
                 price_str = format(price, ".3f")
                 if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
                     print("No significant price change and last feed is still valid")
@@ -225,9 +230,10 @@ if __name__ == '__main__':
                 freq           = steemfeed_config["freq"]
                 min_change     = steemfeed_config["min_change"]
                 max_age        = steemfeed_config["max_age"]
+                exchange_w     = steemfeed_config["exchange_w"]
                 bts_ws         = steemfeed_config["bts_ws"]
 
         left_min = (interval - (curr_t - start_t))/60
         if steem_q > 0:
-            print("%s minutes to next update / Volume: %s BTC, %s STEEM / Average Price: %s\r" % (str(int(left_min)), format(btc_q, ".4f"), str(int(steem_q)), format(btc_q/steem_q, ".8f")), end="")
+            print("%s minutes to next update / Volume: %s BTC, %s STEEM / Average Price: %s BTC (%s USD) \r" % (str(int(left_min)), format(btc_q, ".4f"), str(int(steem_q)), format(btc_q/steem_q, ".8f"), format(btc_q/steem_q*btc_usd(exchange_w), ".4f")), end="")
         time.sleep(freq*0.7)
