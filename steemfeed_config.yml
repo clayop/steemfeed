@@ -8,3 +8,11 @@ max_age        : 86400               # Maximum age of price feed
 bts_ws         : ["wss://bitshares.openledger.info/ws", "wss://valen-tin.fr:8090/ws"]
 witness        : "YOURWITNESS"            # Your witness name
 wif            : ""
+exchange_w:    # Weights for each exchange (0 to ignore)
+  bitfinex: 1
+  coinbase: 1
+  okcoin: 1
+  bitstamp: 1
+  poloniex: 1
+  bittrex: 1
+  btsdex: 1
