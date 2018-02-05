@@ -206,6 +206,8 @@ if __name__ == '__main__':
                 base = btc_q/steem_q*btc_usd(exchange_w)
                 quote = 1/(1-discount)
                 price = base/quote
+                my_info = steem.get_witness_by_account(witness)
+                last_update_t = dateutil.parser.parse(my_info["last_sbd_exchange_update"]).timestamp()
                 last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0])
                 price_str = format(price, ".3f")
                 if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
@@ -235,5 +237,5 @@ if __name__ == '__main__':
 
         left_min = (interval - (curr_t - start_t))/60
         if steem_q > 0:
-            print("%s minutes to next update / Volume: %s BTC, %s STEEM / Average Price: %s BTC (%s USD) \r" % (str(int(left_min)), format(btc_q, ".4f"), str(int(steem_q)), format(btc_q/steem_q, ".8f"), format(btc_q/steem_q*btc_usd(exchange_w), ".4f")), end="")
+            print("%s minutes to next update / Volume: %s BTC, %s STEEM / Average Price: %s BTC (%s USD)" % (str(int(left_min)), format(btc_q, ".4f"), str(int(steem_q)), format(btc_q/steem_q, ".8f"), format(btc_q/steem_q*btc_usd(exchange_w), ".4f")), end="\r")
         time.sleep(freq*0.7)
