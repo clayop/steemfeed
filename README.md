@@ -18,15 +18,15 @@ To use this price feed script, the following dependencies and packages should be
     sudo pip3 install requests
     sudo pip3 install pycrypto
     sudo pip3 install pyyaml
-    sudo pip install -U steem
+    sudo pip3 install steem
 
 (if you got an error during installing steem, run ``sudo pip3 install upgrade pip``)
 
 _You can find more info about `steem` [here](https://github.com/steemit/steem-python)_
 
-Then, edit `~/witness_node_data_dir/config.ini` and make sure to add required APIs:
+Then, edit `~/.steemd/config.ini` and make sure to add required APIs:
 ```
-public-api = database_api login_api network_broadcast_api
+plugin = p2p json_rpc webserver witness database_api witness_api condenser_api network_broadcast_api block_api
 ```
 
 
