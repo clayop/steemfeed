@@ -85,9 +85,9 @@ def bts_dex_hist(address):
         except:
             return (0, 0, 0)
 
-def publish_feed(base, quote, account):
-    steem.commit.witness_feed_publish(base, quote=quote, account=account)
-    print("Published price feed: " + format(base/quote, ".3f") + " USD/STEEM at " + time.ctime()+"\n")
+def publish_feed(price, account):
+    steem.commit.witness_feed_publish(price, account=account)
+    print("Published price feed: " + format(price, ".3f") + " USD/STEEM at " + time.ctime()+"\n")
 
 
 if __name__ == '__main__':
@@ -202,25 +202,28 @@ if __name__ == '__main__':
             last_t = (time.time()//freq)*freq - freq
 
         if curr_t - start_t >= interval:
-            if steem_q > 0:
-                base = btc_q/steem_q*btc_usd(exchange_w)
-                quote = 1/(1-discount)
-                price = base/quote
-                my_info = steem.get_witness_by_account(witness)
-                last_update_t = dateutil.parser.parse(my_info["last_sbd_exchange_update"]).timestamp()
-                last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0])
-                price_str = format(price, ".3f")
-                if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
-                    print("No significant price change and last feed is still valid")
-                    print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
+            try:
+                if steem_q > 0:
+                    base = btc_q/steem_q*btc_usd(exchange_w)
+                    quote = 1/(1-discount)
+                    price = base/quote
+                    my_info = steem.get_witness_by_account(witness)
+                    last_update_t = dateutil.parser.parse(my_info["last_sbd_exchange_update"]).timestamp()
+                    last_price = float(my_info["sbd_exchange_rate"]["base"].split()[0]) / float(my_info["sbd_exchange_rate"]["quote"].split()[0])
+                    price_str = format(price, ".3f")
+                    if (abs(1 - price/last_price) < min_change) and ((curr_t - last_update_t) < max_age):
+                        print("No significant price change and last feed is still valid")
+                        print("Last price: " + format(last_price, ".3f") + "  Current price: " + price_str + "  " + format((price/last_price*100 - 100), ".1f") + "%  / Feed age: " + str(int((curr_t - last_update_t)/3600)) + " hours")
+                    else:
+                        publish_feed(price, witness)
+                        last_price = price
+                        steem_q = 0
+                        btc_q = 0
+                        last_update_t = (time.time()//freq)*freq - freq
                 else:
-                    publish_feed(base, quote, witness)
-                    last_price = price
-                    steem_q = 0
-                    btc_q = 0
-                    last_update_t = (time.time()//freq)*freq - freq
-            else:
-                print("No trades occured during this period")
+                    print("No trades occured during this period")
+            except Exception as e:
+                print(str(e))
             interval = rand_interval(interval_init)
             start_t = (time.time()//freq)*freq - freq
             with open("steemfeed_config.yml", "r") as config_file:
